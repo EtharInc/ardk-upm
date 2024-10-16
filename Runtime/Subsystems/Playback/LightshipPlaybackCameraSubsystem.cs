@@ -40,7 +40,7 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
         {
             Log.Info("LightshipPlaybackCameraSubsystem.Register");
             const string id = "Lightship-Playback-Camera";
-            var info = new XRCameraSubsystemCinfo
+            var info = new XRCameraSubsystemDescriptor.Cinfo
             {
                 id = id,
                 providerType = typeof(LightshipPlaybackProvider),
@@ -62,7 +62,7 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
                 supportsWorldTrackingHDRLightEstimation = false
             };
 
-            Register(info);
+            XRCameraSubsystemDescriptor.Register(info);
         }
 
         void IPlaybackDatasetUser.SetPlaybackDatasetReader(PlaybackDatasetReader reader)

@@ -308,7 +308,7 @@ namespace Niantic.Lightship.AR.Subsystems.Common
             XRCpuImage.ConversionParams conversionParams
         )
         {
-            if (!SystemInfo.IsFormatSupported(destinationTexture.graphicsFormat, FormatUsage.Render))
+            if (!SystemInfo.IsFormatSupported(destinationTexture.graphicsFormat, GraphicsFormatUsage.Render))
             {
                 Log.Error($"Texture format: {destinationTexture.graphicsFormat} not supported on this platform.");
                 return;

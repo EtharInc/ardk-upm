@@ -22,8 +22,9 @@ namespace Niantic.Lightship.AR.Utilities
 #if UNITY_EDITOR
             var aspectRatio = CameraEditorUtils.GameViewAspectRatio;
             return aspectRatio >= 1.0 ? ScreenOrientation.LandscapeLeft : ScreenOrientation.Portrait;
-#endif
+#else
             return ScreenOrientation.Portrait;
+#endif
         }
 
         [Obsolete("Use GetEditorScreenOrientation instead")]

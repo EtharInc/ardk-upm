@@ -24,11 +24,11 @@ namespace Niantic.Lightship.AR
 #if !NIANTIC_ARDK_EXPERIMENTAL_FEATURES && !NIANTIC_LIGHTSHIP_ML2_ENABLED
                 Log.Error("LightshipLocationSpoof is an experimental feature and is not enabled. Please enable NIANTIC_ARDK_EXPERIMENTAL_FEATURES in your project settings.");
                 return null;
-#endif
-
+#else
                 s_instance ??= new LightshipLocationSpoof();
 
                 return s_instance;
+#endif
             }
         }
 

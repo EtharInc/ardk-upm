@@ -524,7 +524,7 @@ namespace Niantic.Lightship.AR.Occlusion
                     {
                         if (_semanticSegmentationManager == null)
                         {
-                            _semanticSegmentationManager = FindObjectOfType<ARSemanticSegmentationManager>();
+                            _semanticSegmentationManager = FindFirstObjectByType<ARSemanticSegmentationManager>();
 
                             if (_semanticSegmentationManager == null)
                             {
@@ -561,7 +561,7 @@ namespace Niantic.Lightship.AR.Occlusion
                     {
                         if (_meshManager == null)
                         {
-                            _meshManager = FindObjectOfType<ARMeshManager>();
+                            _meshManager = FindFirstObjectByType<ARMeshManager>();
 
                             if (_meshManager == null)
                             {

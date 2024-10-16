@@ -77,7 +77,7 @@ namespace Niantic.Lightship.AR.NavigationMesh
             _agentConfig = new AgentConfiguration(jumpPenalty, jumpDistance, pathFindingBehaviour);
 
             //find the LightshipNavMesh manager and connect it.
-            _lightshipNavMeshManager = GameObject.FindObjectOfType<LightshipNavMeshManager>();
+            _lightshipNavMeshManager = GameObject.FindFirstObjectByType<LightshipNavMeshManager>();
 
             //fail if missing
             if (_lightshipNavMeshManager == null)

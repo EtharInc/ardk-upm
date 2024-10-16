@@ -105,7 +105,7 @@ namespace Niantic.Lightship.AR.Editor
                     if (_semanticSegmentationManager.objectReferenceValue == null && !_triedLookingForSemanticsManager)
                     {
                         _triedLookingForSemanticsManager = true;
-                        _semanticSegmentationManager.objectReferenceValue = FindObjectOfType<ARSemanticSegmentationManager>();
+                        _semanticSegmentationManager.objectReferenceValue = FindFirstObjectByType<ARSemanticSegmentationManager>();
                     }
 
                     // Now that we've tried auto-filling, show the correct UI based on whether an
@@ -133,7 +133,7 @@ namespace Niantic.Lightship.AR.Editor
                     if (_meshManager.objectReferenceValue == null && !_triedLookingForMeshManager)
                     {
                         _triedLookingForMeshManager = true;
-                        _meshManager.objectReferenceValue = FindObjectOfType<ARMeshManager>();
+                        _meshManager.objectReferenceValue = FindFirstObjectByType<ARMeshManager>();
                     }
 
                     if (!isLocalTransformIdentity)

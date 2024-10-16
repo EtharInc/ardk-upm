@@ -31,7 +31,7 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
                 supportsMatchFrameRate = true,
             };
 
-            XRSessionSubsystemDescriptor.RegisterDescriptor(info);
+            XRSessionSubsystemDescriptor.Register(info);
         }
 
         void IPlaybackDatasetUser.SetPlaybackDatasetReader(PlaybackDatasetReader reader)

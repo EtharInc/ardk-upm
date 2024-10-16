@@ -177,7 +177,7 @@ namespace Niantic.Lightship.AR.LocationAR
 
                 if (_coverageClient == null)
                 {
-                    _coverageClient = CoverageClientFactory.Create();
+                    _coverageClient = new CoverageClient();
                 }
                 TryTrackLocationsFromCoverage();
                 return;

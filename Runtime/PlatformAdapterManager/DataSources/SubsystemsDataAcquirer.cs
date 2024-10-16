@@ -187,8 +187,13 @@ namespace Niantic.Lightship.AR.PAM
 
             if (_cameraSubsystem.TryGetLatestFrame(emptyParams, out var frame))
             {
-                timestampMs = (double)frame.timestampNs / 1_000_000;
-                return true;
+                if (frame.TryGetTimestamp(out var timestamp))
+                {
+                    timestampMs = timestamp / 1_000_000;
+                    return true;
+                }
+                timestampMs = 0;
+                return false;
             }
 
             timestampMs = 0;

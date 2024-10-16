@@ -26,7 +26,7 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
         {
             Log.Info("LightshipPlaybackOcclusionSubsystem.Register");
             const string id = "Lightship-Playback-Occlusion";
-            var xrOcclusionSubsystemCinfo = new XROcclusionSubsystemCinfo()
+            var xrOcclusionSubsystemCinfo = new XROcclusionSubsystemDescriptor.Cinfo()
             {
                 id = id,
                 providerType = typeof(LightshipPlaybackProvider),
@@ -38,7 +38,7 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
                 environmentDepthTemporalSmoothingSupportedDelegate = () => Supported.Unsupported
             };
 
-            XROcclusionSubsystem.Register(xrOcclusionSubsystemCinfo);
+            XROcclusionSubsystemDescriptor.Register(xrOcclusionSubsystemCinfo);
         }
 
         void IPlaybackDatasetUser.SetPlaybackDatasetReader(PlaybackDatasetReader reader)

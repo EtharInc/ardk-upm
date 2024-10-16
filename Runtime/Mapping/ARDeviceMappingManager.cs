@@ -133,9 +133,9 @@ namespace Niantic.Lightship.AR.Mapping
 
         // private vars
 
-        private IMappingApi _mapper;
-        private IMapStorageAccessApi _api;
-        private OutputEdgeType _outputEdgeType = OutputEdgeType.All;
+        //private IMappingApi _mapper;
+        //private IMapStorageAccessApi _api;
+        //private OutputEdgeType _outputEdgeType = OutputEdgeType.All;
 
         private ARDeviceMap _arDeviceMap = new ();
 

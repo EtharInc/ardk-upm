@@ -11,8 +11,8 @@ namespace Niantic.Lightship.AR.Telemetry
     internal static class TelemetryHelper
     {
         // using this flow with a pvt static bool to avoid re-subscribing to event in case of domain reloads.
-        private static bool s_isInitializationEventLoggingRegistered = false;
-        private static bool s_isArSessionCountEventRegistered = false;
+        //private static bool s_isInitializationEventLoggingRegistered = false;
+        //private static bool s_isArSessionCountEventRegistered = false;
 
 #if NIANTIC_LIGHTSHIP_AR_LOADER_ENABLED
 
@@ -97,7 +97,7 @@ namespace Niantic.Lightship.AR.Telemetry
         private static void UnregisterArSessionStartEvent()
         {
             ARSession.stateChanged -= LogArSessionStartEvent;
-            s_isArSessionCountEventRegistered = false;
+            //s_isArSessionCountEventRegistered = false;
         }
     }
 }

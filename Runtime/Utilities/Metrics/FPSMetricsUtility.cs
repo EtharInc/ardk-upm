@@ -82,7 +82,7 @@ namespace Niantic.Lightship.AR.Utilities.Metrics
             }
 
             var activeMeshSubsystem = xrManager.activeLoader.GetLoadedSubsystem<XRMeshSubsystem>();
-            if (activeMeshSubsystem is null || activeMeshSubsystem.SubsystemDescriptor.id != "LightshipMeshing")
+            if (activeMeshSubsystem is null || activeMeshSubsystem.subsystemDescriptor.id != "LightshipMeshing")
             {
                 Log.Debug("Mesh FPS not being tracked");
                 _usingMesh = false;
@@ -113,7 +113,7 @@ namespace Niantic.Lightship.AR.Utilities.Metrics
             if (_automaticallyTrackFPS)
             {
                 // Check if we can actually track the fps using the ARCameraManager frameReceived event
-                _cameraManager = Object.FindObjectOfType<ARCameraManager>(includeInactive: true);
+                _cameraManager = Object.FindFirstObjectByType<ARCameraManager>(FindObjectsInactive.Include);
 
                 if (_cameraManager == null)
                 {
@@ -127,7 +127,7 @@ namespace Niantic.Lightship.AR.Utilities.Metrics
                 _cameraManager.frameReceived += OnFrameReceived;
 
                 // Check if we can actually track the depth fps using the AROcclusionManager
-                var arOcclusionManager = Object.FindObjectOfType<AROcclusionManager>(includeInactive: true);
+                var arOcclusionManager = Object.FindFirstObjectByType<AROcclusionManager>(FindObjectsInactive.Include);
                 if (_usingDepth && arOcclusionManager == null)
                 {
                     Log.Debug("Cannot track depth FPS: No AROcclusionManager found in scene");

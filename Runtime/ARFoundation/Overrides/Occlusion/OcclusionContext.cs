@@ -1,6 +1,7 @@
 // Copyright 2022-2024 Niantic.
 
 using System;
+using Niantic.Lightship.AR.Utilities;
 using Unity.Collections;
 using UnityEngine.XR.ARSubsystems;
 using UnityEngine.XR.Management;
@@ -27,7 +28,7 @@ namespace Niantic.Lightship.AR.Occlusion
 
         private static void ResetOccludee()
         {
-            Shared.OccludeeEyeDepth = 5.0f;
+            XRDisplayContext.OccludeeEyeDepth = 5.0f;
         }
 
         private float? _cachedAspectRatio;

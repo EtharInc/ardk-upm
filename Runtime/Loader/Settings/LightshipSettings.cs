@@ -404,7 +404,6 @@ namespace Niantic.Lightship.AR.Loader
                     PlaybackDatasetPath = playbackDataset,
                     RunManually = runPlaybackManually,
                     LoopInfinitely = loopPlaybackInfinitely,
-                    NumberOfIterations = numberOfPlaybackLoops
                 };
 
             if (endpointSettings == null)

@@ -43,7 +43,7 @@ namespace Niantic.Lightship.AR.Subsystems.Semantics
         private bool _hasMetadata = false;
         private float _startTime;
 
-		private UInt32 _suppressionMaskChannels = 0;
+		//private UInt32 _suppressionMaskChannels = 0;
 
         private XRCpuImage.Api _cpuImageApi => LightshipCpuImageApi.Instance;
 

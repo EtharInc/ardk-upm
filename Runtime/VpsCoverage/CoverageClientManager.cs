@@ -120,7 +120,7 @@ namespace Niantic.Lightship.AR.VpsCoverage
 
         private void Awake()
         {
-            _coverageClient = CoverageClientFactory.Create();
+            _coverageClient = new CoverageClient();
         }
 
         /// <summary>

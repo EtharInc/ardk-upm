@@ -29,7 +29,6 @@ namespace Niantic.Lightship.AR.Subsystems
         private Material _texturedMeshMaterial;
 
         private bool isUpdatingMesh;
-        private DracoMeshLoader Draco;
         private CancellationTokenSource _cancellationTokenSource;
 
         private void Start()
@@ -73,7 +72,6 @@ namespace Niantic.Lightship.AR.Subsystems
 
         private void OnEnable()
         {
-            Draco ??= new DracoMeshLoader();
             _cancellationTokenSource = new CancellationTokenSource();
 
             isUpdatingMesh = false;
@@ -283,7 +281,9 @@ namespace Niantic.Lightship.AR.Subsystems
                     DestroyImmediate(newMeshGo);
                     // For editor, force an immediate unload to free mesh memory.
                     // For device, this needs to be handled manually
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Resources.UnloadUnusedAssets();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 }
                 else
                 {
@@ -302,7 +302,9 @@ namespace Niantic.Lightship.AR.Subsystems
                     DestroyImmediate(newMeshGo);
                     // For editor, force an immediate unload to free mesh memory.
                     // For device, this needs to be handled manually
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Resources.UnloadUnusedAssets();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 }
                 else
                 {

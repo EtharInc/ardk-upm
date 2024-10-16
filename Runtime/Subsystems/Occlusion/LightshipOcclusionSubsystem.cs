@@ -193,7 +193,7 @@ namespace Niantic.Lightship.AR.Subsystems.Occlusion
         {
             Log.Info("LightshipOcclusionSubsystem.Register");
             const string id = "Lightship-Occlusion";
-            var xrOcclusionSubsystemCinfo = new XROcclusionSubsystemCinfo()
+            var xrOcclusionSubsystemCinfo = new XROcclusionSubsystemDescriptor.Cinfo()
             {
                 id = id,
                 providerType = typeof(LightshipOcclusionProvider),
@@ -205,7 +205,7 @@ namespace Niantic.Lightship.AR.Subsystems.Occlusion
                 environmentDepthTemporalSmoothingSupportedDelegate = () => Supported.Unsupported
             };
 
-            XROcclusionSubsystem.Register(xrOcclusionSubsystemCinfo);
+            XROcclusionSubsystemDescriptor.Register(xrOcclusionSubsystemCinfo);
         }
 
         /// <summary>
