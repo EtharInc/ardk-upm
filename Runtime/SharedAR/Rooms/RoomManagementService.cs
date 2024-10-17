@@ -305,7 +305,7 @@ namespace Niantic.Lightship.SharedAR.Rooms
         [Obsolete]
         public delegate void GetOrCreateRoomCallback(RoomManagementServiceStatus status, string room_id);
 
-        //private static uint _cbCounter = 0;
+        private static uint _cbCounter = 0;
         [Obsolete]
         private static Dictionary<uint, GetOrCreateRoomCallback> _getOrCreateRoomCbs = new();
 
