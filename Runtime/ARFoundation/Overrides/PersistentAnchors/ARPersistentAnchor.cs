@@ -34,7 +34,7 @@ namespace Niantic.Lightship.AR.PersistentAnchors
         /// lifetime is also implementation defined, it should be valid until at least
         /// the next <see cref="ARSession"/> update.
         /// </remarks>
-        public IntPtr nativePtr => sessionRelativeData.nativePtr;
+        public override IntPtr nativePtr => sessionRelativeData.nativePtr;
 
         /// <summary>
         /// The Persistent Anchor's current tracking state.

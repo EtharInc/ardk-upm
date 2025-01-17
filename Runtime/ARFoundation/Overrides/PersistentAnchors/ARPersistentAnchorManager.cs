@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Niantic.Lightship.AR.Common;
 using Niantic.Lightship.AR.Core;
+using Niantic.Lightship.AR.Mapping;
 using Niantic.Lightship.AR.Subsystems.PersistentAnchor;
 using Niantic.Lightship.AR.Utilities;
 using Niantic.Lightship.AR.XRSubsystems;
@@ -127,7 +128,9 @@ namespace Niantic.Lightship.AR.PersistentAnchors
 
         [Tooltip("Automatically tune VPS parameters based on preset configurations")]
         [SerializeField]
+#pragma warning disable CS0414 // Type or member is not used
         private LightshipVpsUsageUtility.LightshipVpsUsageMode _VpsUsageMode = LightshipVpsUsageUtility.LightshipVpsUsageMode.Default;
+#pragma warning restore CS0414 // Type or member is not used
 
         /// <summary>
         /// Number of seconds over which anchor interpolation occurs.
@@ -222,6 +225,7 @@ namespace Niantic.Lightship.AR.PersistentAnchors
             set => _DiagnosticsEnabled = value;
         }
 
+
 #if NIANTIC_ARDK_EXPERIMENTAL_FEATURES
         [Tooltip("Synchronize the fusion window size with the continuous service request interval")]
         [SerializeField]
@@ -260,18 +264,12 @@ namespace Niantic.Lightship.AR.PersistentAnchors
         }
 
         /// <summary>
-        /// Defines the interval between localization requests for Slick Localization.
-        /// Set to 0 for processing every frame.
+        /// Defines the size of the temporal fusion window for Device Mapping Localization.
+        /// This should be inversely proportional to the DeviceMappingLocalizationRequestIntervalSeconds.
         /// </summary>
-        public float SlickLocalizationRequestIntervalSeconds { get; set; }
-            = XRPersistentAnchorConfiguration.DefaultSlickLocalizationFps.ZeroOrReciprocal();
-
-        /// <summary>
-        /// Defines the size of the temporal fusion window for Slick Localization.
-        /// This should be inversely proportional to the SlickLocalizationRequestIntervalSeconds.
-        /// </summary>
-        public uint SlickLocalizationTemporalFusionWindowSize { get; set; }
-            = XRPersistentAnchorConfiguration.DefaultSlickLocalizationTemporalFusionWindowSize;
+        [Experimental]
+        public uint DeviceMappingLocalizationTemporalFusionWindowSize { get; set; }
+            = XRPersistentAnchorConfiguration.DefaultDeviceMappingLocalizationTemporalFusionWindowSize;
 
         /// <summary>
         /// Obsolete. Use CloudLocalizationTemporalFusionWindowSize instead.
@@ -285,6 +283,14 @@ namespace Niantic.Lightship.AR.PersistentAnchors
 #endif
 
         /// <summary>
+        /// Defines the interval between localization requests for Device Mapping Localization.
+        /// Set to 0 for processing every frame.
+        /// </summary>
+        [Experimental]
+        public float DeviceMappingLocalizationRequestIntervalSeconds { get; set; }
+            = XRPersistentAnchorConfiguration.DefaultDeviceMappingLocalizationFps.ZeroOrReciprocal();
+
+        /// <summary>
         /// Enable/Disable Cloud Localization
         /// </summary>
         private bool _cloudLocalizationEnabled = XRPersistentAnchorConfiguration.DefaultCloudLocalizationEnabled;
@@ -294,44 +300,51 @@ namespace Niantic.Lightship.AR.PersistentAnchors
             set => _cloudLocalizationEnabled = value;
         }
 
+        private bool _deviceMappingLocalizationEnabled = XRPersistentAnchorConfiguration.DefaultDeviceMappingLocalizationEnabled;
+
         /// <summary>
         /// Enable Device Localization
         /// @note This is an experimental feature, and is subject to breaking changes or deprecation without notice
         /// </summary>
-        private bool _slickLocalizationEnabled = XRPersistentAnchorConfiguration.DefaultSlickLocalizationEnabled;
-
-        public bool SlickLocalizationEnabled
+        [Experimental]
+        public bool DeviceMappingLocalizationEnabled
         {
-            get => _slickLocalizationEnabled;
+            get => _deviceMappingLocalizationEnabled;
             set
             {
-                if (!LightshipUnityContext.FeatureEnabled(XRPersistentAnchorSubsystem.SlickLocalizationFeatureFlagName))
-                {
-                    Log.Warning("Slick Localization feature cannot be enabled. Use feature flag.");
-                    return;
-                }
-                _slickLocalizationEnabled = value;
+                _deviceMappingLocalizationEnabled = value;
             }
         }
+
+        private DeviceMappingType _deviceMappingType = XRPersistentAnchorConfiguration.DefaultDeviceMappingType;
 
         /// <summary>
         /// Enable Learned Features in Device Localization
         /// @note This is an experimental feature, and is subject to breaking changes or deprecation without notice
         /// </summary>
-        private bool _slickLearnedFeaturesEnabled = XRPersistentAnchorConfiguration.DefaultSlickLearnedFeaturesEnabled;
-
-        public bool SlickLearnedFeaturesEnabled
+        [Experimental]
+        public DeviceMappingType DeviceMappingType
         {
-            get => _slickLearnedFeaturesEnabled;
+            get => _deviceMappingType;
             set
             {
-                if (!LightshipUnityContext.FeatureEnabled(XRPersistentAnchorSubsystem.SlickLocalizationFeatureFlagName))
-                {
-                    Log.Warning("Slick LearnedFeatures feature cannot be enabled. Use feature flag.");
-                    return;
-                }
-                _slickLearnedFeaturesEnabled = value;
+                _deviceMappingType = value;
             }
+        }
+
+        private bool _deviceMapDownloadEnabled = false;
+        private bool _deviceMapDownloadRunning = false;
+
+        /// <summary>
+        /// Whether to enable or disable map download for device localization
+        /// The maps will be downloaded from Niantic Cloud and download will be based on GPS location
+        /// @note This is an experimental feature, and is subject to breaking changes or deprecation without notice
+        /// </summary>
+        [Experimental]
+        public bool DeviceMapDownloadEnabled
+        {
+            get => _deviceMapDownloadEnabled;
+            set => _deviceMapDownloadEnabled = value;
         }
 
         /// <summary>
@@ -401,6 +414,14 @@ namespace Niantic.Lightship.AR.PersistentAnchors
 
         protected override void OnBeforeStart()
         {
+
+            if (_deviceMapDownloadEnabled)
+            {
+                DeviceMapAccessController.Instance.StartDownloadingMaps();
+                _deviceMapDownloadRunning = true;
+            }
+
+
             // We capture the current subsystem configurations so we don't overwrite unwanted configs with default
             XRPersistentAnchorConfiguration cfg = new(subsystem.CurrentConfiguration);
 
@@ -415,6 +436,10 @@ namespace Niantic.Lightship.AR.PersistentAnchors
 
             cfg.DiagnosticsEnabled = DiagnosticsEnabled;
 
+            cfg.DeviceMappingLocalizationEnabled = DeviceMappingLocalizationEnabled;
+            cfg.DeviceMappingType = DeviceMappingType;
+            cfg.DeviceMappingLocalizationFps = DeviceMappingLocalizationRequestIntervalSeconds.ZeroOrReciprocal();
+
 #if NIANTIC_ARDK_EXPERIMENTAL_FEATURES
             if (_SyncFusionWindow)
             {
@@ -428,10 +453,7 @@ namespace Niantic.Lightship.AR.PersistentAnchors
             }
 
             cfg.LimitedLocalizationsOnly = LimitedLocalizationsOnly;
-            cfg.SlickLocalizationEnabled = SlickLocalizationEnabled;
-            cfg.SlickLearnedFeaturesEnabled = SlickLearnedFeaturesEnabled;
-            cfg.SlickLocalizationFps = SlickLocalizationRequestIntervalSeconds.ZeroOrReciprocal();
-            cfg.SlickLocalizationTemporalFusionWindowSize = SlickLocalizationTemporalFusionWindowSize;
+            cfg.DeviceMappingLocalizationTemporalFusionWindowSize = DeviceMappingLocalizationTemporalFusionWindowSize;
 #endif
 
             subsystem.CurrentConfiguration = cfg;
@@ -540,11 +562,6 @@ namespace Niantic.Lightship.AR.PersistentAnchors
         /// </returns>
         public bool TryCreateAnchor(Pose anchorLocalPose, out ARPersistentAnchor arPersistentAnchor)
         {
-            if (!LightshipUnityContext.FeatureEnabled(XRPersistentAnchorSubsystem.SlickLocalizationFeatureFlagName))
-            {
-                arPersistentAnchor = default;
-                return false;
-            }
             if (subsystem == null || !subsystem.running)
             {
                 arPersistentAnchor = default;
@@ -666,12 +683,16 @@ namespace Niantic.Lightship.AR.PersistentAnchors
         /// <param name="added">The list of added anchors.</param>
         /// <param name="updated">The list of updated anchors.</param>
         /// <param name="removed">The list of removed anchors.</param>
+#pragma warning disable CS0672 // Member overrides obsolete member
         protected override void OnTrackablesChanged(
+#pragma warning restore CS0672 // Member overrides obsolete member
             List<ARPersistentAnchor> added,
             List<ARPersistentAnchor> updated,
             List<ARPersistentAnchor> removed)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             base.OnTrackablesChanged(added, updated, removed);
+#pragma warning restore CS0618 // Type or member is obsolete
             using (new ScopedProfiler("OnPersistentAnchorsChanged"))
             {
                 ReportAddedAnchors(added.ToArray());
@@ -859,6 +880,13 @@ namespace Niantic.Lightship.AR.PersistentAnchors
 
         private void OnSubsystemStop()
         {
+
+           if (_deviceMapDownloadRunning)
+            {
+                DeviceMapAccessController.Instance.StopDownloadingMaps();
+                _deviceMapDownloadRunning = false;
+            }
+
             RemoveAllAnchorsImmediate();
             HandleTelemetryForSessionEnd();
         }

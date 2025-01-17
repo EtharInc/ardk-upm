@@ -261,7 +261,7 @@ internal class _ARLocationManagerEditor : _ARPersistentAnchorManagerEditor
         // Because we hide the object right as we enter play mode, the de-activated state
         // does not get serialized to the scene. Meaning Unity automatically handles restoring
         // the active flag to it's previous state when exiting play mode.
-        var allManagers = FindObjectsByType<ARLocationManager>(FindObjectsSortMode.None);
+        var allManagers = UnityEngine.Object.FindObjectsOfType<ARLocationManager>();
         foreach (var locationManager in allManagers)
         {
             foreach (var arLocation in locationManager.ARLocations)

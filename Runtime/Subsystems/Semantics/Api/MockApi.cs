@@ -43,7 +43,9 @@ namespace Niantic.Lightship.AR.Subsystems.Semantics
         private bool _hasMetadata = false;
         private float _startTime;
 
-		//private UInt32 _suppressionMaskChannels = 0;
+#pragma warning disable CS0414 // Type or member is not used
+		private UInt32 _suppressionMaskChannels = 0;
+#pragma warning restore CS0414 // Type or member is not used
 
         private XRCpuImage.Api _cpuImageApi => LightshipCpuImageApi.Instance;
 
@@ -92,7 +94,7 @@ namespace Niantic.Lightship.AR.Subsystems.Semantics
             _frameNumber += 1;
         }
 
-        public void Configure(IntPtr nativeProviderHandle, UInt32 framesPerSecond, UInt32 numThresholds, IntPtr thresholds, List<string> suppressionMaskChannelNames) {
+        public void Configure(IntPtr nativeProviderHandle, UInt32 framesPerSecond, UInt32 numThresholds, IntPtr thresholds, HashSet<string> suppressionMaskChannelNames) {
             InitializeSuppressionMaskBuffer(GetFlags(suppressionMaskChannelNames));
 		}
 

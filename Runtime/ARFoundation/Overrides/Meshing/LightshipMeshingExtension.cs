@@ -506,7 +506,7 @@ namespace Niantic.Lightship.AR.Meshing
               return false;
           }
 
-          if (meshSubsystem.SubsystemDescriptor.id != "LightshipMeshing")
+          if (meshSubsystem.subsystemDescriptor.id != "LightshipMeshing")
           {
               return false;
           }

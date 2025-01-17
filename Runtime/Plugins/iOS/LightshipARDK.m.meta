@@ -1,29 +1,10 @@
 fileFormatVersion: 2
 guid: 1044946045728cbfc3dea2865b47391c
-PluginImporter:
-  externalObjects: {}
-  serializedVersion: 3
-  iconMap: {}
-  executionOrder: {}
-  defineConstraints: []
-  isPreloaded: 0
-  isOverridable: 1
-  isExplicitlyReferenced: 0
-  validateReferences: 1
-  platformData:
-    Any:
-      enabled: 0
-      settings: {}
-    Editor:
-      enabled: 0
-      settings:
-        DefaultValueInitialized: true
-    iOS:
-      enabled: 1
-      settings: {}
-    tvOS:
-      enabled: 1
-      settings: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData:
+  assetBundleName:
+  assetBundleVariant:

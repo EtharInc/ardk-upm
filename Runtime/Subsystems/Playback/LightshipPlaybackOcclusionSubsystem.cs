@@ -46,7 +46,7 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
             ((IPlaybackDatasetUser)provider).SetPlaybackDatasetReader(reader);
         }
 
-        internal Matrix4x4? _LatestIntrinsicsMatrix
+        internal Matrix4x4? LatestIntrinsicsMatrix
         {
             get
             {
@@ -59,7 +59,7 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
             }
         }
 
-        internal Matrix4x4? _LatestExtrinsicsMatrix
+        internal Matrix4x4? LatestExtrinsicsMatrix
         {
             get
             {
@@ -543,7 +543,9 @@ namespace Niantic.Lightship.AR.Subsystems.Playback
             /// </summary>
             /// <param name="enabledKeywords">The keywords to enable for the material.</param>
             /// <param name="disabledKeywords">The keywords to disable for the material.</param>
+#pragma warning disable CS0672 // Member overrides obsolete member
             public override void GetMaterialKeywords(out List<string> enabledKeywords,
+#pragma warning restore CS0672 // Member overrides obsolete member
                 out List<string> disabledKeywords)
             {
                 if ((_occlusionPreferenceMode == OcclusionPreferenceMode.NoOcclusion))

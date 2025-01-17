@@ -14,7 +14,9 @@ namespace Niantic.Lightship.AR.Settings
     public static partial class PrivacyData
     {
         // using this to avoid re-subscribing to event in case of domain reloads.
+#pragma warning disable CS0414 // Type or member is not used
         private static bool s_missingUserWarningRegistered = false;
+#pragma warning restore CS0414 // Type or member is not used
 
         /// <summary>
         /// This is the device Id used to identify any device. In case there is no userId, the clientId can be provided

@@ -1,14 +1,16 @@
 // Copyright 2022-2024 Niantic.
 
+using System;
 using Niantic.Lightship.AR.Utilities.Logging;
 using Niantic.Lightship.AR.Subsystems.Occlusion;
 using Niantic.Lightship.AR.Utilities;
 using Unity.XR.CoreUtils;
 using UnityEngine;
+using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 using UnityEngine.XR.Management;
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if UNITY_ANDROID
 using UnityEngine.Android;
 #endif
 
@@ -27,9 +29,10 @@ namespace Niantic.Lightship.AR.PAM
         private Texture2D _gpuDepthConfidenceTex;
 
         // CPU images
-        private XRCpuImage _cpuImage;
-        private XRCpuImage _depthImage;
-        private XRCpuImage _depthConfidenceImage;
+        private XRCpuImage _cameraCpuImage;
+        private XRCpuImage _depthCpuImage;
+        private XRCpuImage _depthConfidenceCpuImage;
+        private ARSessionState _lastSessionState = ARSessionState.None;
 
         // Descriptors
         private XRTextureDescriptor _gpuImageDescriptor;
@@ -37,10 +40,10 @@ namespace Niantic.Lightship.AR.PAM
         private const float DefaultAccuracyMeters = 0.01f;
         private const float DefaultDistanceMeters = 0.01f;
 
+        private bool _requestedLocationPermissions;
         private bool _autoEnabledLocationServices;
         private bool _autoEnabledCompass;
         private bool _usingLightshipOcclusion;
-        private bool _locationServiceNeedsToStart;
 
         /// <summary>
         /// Indicates whether all required subsystems have been loaded.
@@ -54,7 +57,7 @@ namespace Niantic.Lightship.AR.PAM
         {
             if (!DidLoadSubsystems)
             {
-                AcquireSubsystemReferences();
+                TryAcquireSubsystemReferences();
             }
 
             return DidLoadSubsystems;
@@ -62,11 +65,14 @@ namespace Niantic.Lightship.AR.PAM
 
         public SubsystemsDataAcquirer()
         {
-            AcquireSubsystemReferences();
+            TryAcquireSubsystemReferences();
+            ARSession.stateChanged += OnSessionStateChanged;
         }
 
         public override void Dispose()
         {
+            ARSession.stateChanged -= OnSessionStateChanged;
+
             // Release textures
             UnityObjectUtils.Destroy(_gpuImageTex);
             UnityObjectUtils.Destroy(_gpuDepthImageTex);
@@ -75,7 +81,10 @@ namespace Niantic.Lightship.AR.PAM
             // Reset the descriptors
             _gpuImageDescriptor.Reset();
 
-            if (_autoEnabledLocationServices)
+            _requestedLocationPermissions = false;
+            MonoBehaviourEventDispatcher.LateUpdating.RemoveListener(IOSPermissionRequestCheck);
+
+            if (_autoEnabledLocationServices && Input.location.status == LocationServiceStatus.Running)
             {
                 Log.Info
                 (
@@ -85,7 +94,7 @@ namespace Niantic.Lightship.AR.PAM
                 );
             }
 
-            if (_autoEnabledCompass)
+            if (_autoEnabledCompass && Input.compass.enabled)
             {
                 Log.Info
                 (
@@ -95,13 +104,13 @@ namespace Niantic.Lightship.AR.PAM
                 );
             }
 
-            _cpuImage.Dispose();
-            _depthImage.Dispose();
-            _depthConfidenceImage.Dispose();
+            _cameraCpuImage.Dispose();
+            _depthCpuImage.Dispose();
+            _depthConfidenceCpuImage.Dispose();
         }
 
         // Uses the XRGeneralSettings.instance singleton to connect to all subsystem references.
-        private void AcquireSubsystemReferences()
+        private void TryAcquireSubsystemReferences()
         {
             // Query the currently active loader for the created subsystem, if one exists.
             if (XRGeneralSettings.Instance != null && XRGeneralSettings.Instance.Manager != null)
@@ -109,7 +118,7 @@ namespace Niantic.Lightship.AR.PAM
                 var loader = XRGeneralSettings.Instance.Manager.activeLoader;
                 if (loader != null)
                 {
-                    OnAcquireSubsystems(loader);
+                    OnSubsystemsLoaded(loader);
                 }
             }
         }
@@ -118,7 +127,7 @@ namespace Niantic.Lightship.AR.PAM
         /// Invoked when it is time to cache the subsystem references from the XRLoader.
         /// </summary>
         /// <param name="loader"></param>
-        protected virtual void OnAcquireSubsystems(XRLoader loader)
+        protected virtual void OnSubsystemsLoaded(XRLoader loader)
         {
             _sessionSubsystem = loader.GetLoadedSubsystem<XRSessionSubsystem>();
             _cameraSubsystem = loader.GetLoadedSubsystem<XRCameraSubsystem>();
@@ -126,9 +135,17 @@ namespace Niantic.Lightship.AR.PAM
             _usingLightshipOcclusion = _occlusionSubsystem is LightshipOcclusionSubsystem;
         }
 
-        public override bool TryGetCameraIntrinsicsDeprecated(out XRCameraIntrinsics intrinsics)
+        // See LightshipARCoreLoader.UpgradeCameraConfigurationIfNeeded Note #2 for why we need this logic
+        private void OnSessionStateChanged(ARSessionStateChangedEventArgs args)
         {
-            return _cameraSubsystem.TryGetIntrinsics(out intrinsics);
+            if (_lastSessionState == ARSessionState.SessionTracking && args.state == ARSessionState.SessionInitializing)
+            {
+                Log.Info("ARSession was reset. ARDK functionality will be limited until tracking is re-established.");
+
+                _cameraCpuImage.Dispose();
+            }
+
+            _lastSessionState = args.state;
         }
 
         public override bool TryGetCameraIntrinsicsCStruct(out CameraIntrinsicsCStruct intrinsics)
@@ -187,13 +204,9 @@ namespace Niantic.Lightship.AR.PAM
 
             if (_cameraSubsystem.TryGetLatestFrame(emptyParams, out var frame))
             {
-                if (frame.TryGetTimestamp(out var timestamp))
-                {
-                    timestampMs = timestamp / 1_000_000;
-                    return true;
-                }
-                timestampMs = 0;
-                return false;
+                frame.TryGetTimestamp(out var frameTime);
+                timestampMs = (double)frameTime / 1_000_000;
+                return true;
             }
 
             timestampMs = 0;
@@ -206,42 +219,13 @@ namespace Niantic.Lightship.AR.PAM
             return InputReader.TryGetPose(out pose);
         }
 
-        /// Will return the latest XRCpuImage acquired through the XRCameraSubsystem. The returned image can be invalid,
-        /// for example because the session startup was not completed. XRCpuImages must be disposed by the consumer.
-        public override bool TryGetCpuImageDeprecated(out XRCpuImage cpuImage)
-        {
-            return _cameraSubsystem.TryAcquireLatestCpuImage(out cpuImage);
-        }
-
-        public override bool TryGetDepthCpuImageDeprecated(out XRCpuImage cpuDepthImage, out XRCpuImage cpuDepthConfidenceImage)
-        {
-            if (_usingLightshipOcclusion)
-            {
-                cpuDepthImage = default;
-                cpuDepthConfidenceImage = default;
-                return false;
-            }
-
-            bool gotDepth = _occlusionSubsystem.TryAcquireRawEnvironmentDepthCpuImage(out cpuDepthImage);
-            if (gotDepth)
-            {
-                _occlusionSubsystem.TryAcquireEnvironmentDepthConfidenceCpuImage(out cpuDepthConfidenceImage);
-            }
-            else
-            {
-                cpuDepthConfidenceImage = default;
-            }
-
-            return gotDepth;
-        }
-
         public override bool TryGetCpuImage(out LightshipCpuImage cpuImage)
         {
-            _cpuImage.Dispose(); // TODO(bevangelista) Avoid silently releasing resources on TryGets
+            _cameraCpuImage.Dispose(); // TODO(bevangelista) Avoid silently releasing resources on TryGets
             cpuImage = default;
 
-            return _cameraSubsystem.TryAcquireLatestCpuImage(out _cpuImage) &&
-                LightshipCpuImage.TryGetFromXRCpuImage(_cpuImage, out cpuImage);
+            return _cameraSubsystem.TryAcquireLatestCpuImage(out _cameraCpuImage) &&
+                LightshipCpuImage.TryGetFromXRCpuImage(_cameraCpuImage, out cpuImage);
         }
 
         public override bool TryGetDepthCpuImage
@@ -250,8 +234,8 @@ namespace Niantic.Lightship.AR.PAM
             out LightshipCpuImage confidenceCpuImage
         )
         {
-            _depthImage.Dispose();              // TODO(bevangelista) Avoid silently releasing resources on TryGets
-            _depthConfidenceImage.Dispose();    // TODO(bevangelista) Avoid silently releasing resources on TryGets
+            _depthCpuImage.Dispose();              // TODO(bevangelista) Avoid silently releasing resources on TryGets
+            _depthConfidenceCpuImage.Dispose();    // TODO(bevangelista) Avoid silently releasing resources on TryGets
             depthCpuImage = default;
             confidenceCpuImage = default;
 
@@ -260,29 +244,34 @@ namespace Niantic.Lightship.AR.PAM
                 return false;
             }
 
-            bool hasDepthImage = _occlusionSubsystem.TryAcquireRawEnvironmentDepthCpuImage(out _depthImage);
+            bool hasDepthImage = _occlusionSubsystem.TryAcquireRawEnvironmentDepthCpuImage(out _depthCpuImage);
             if (hasDepthImage)
             {
-                hasDepthImage = LightshipCpuImage.TryGetFromXRCpuImage(_depthImage, out depthCpuImage);
+                hasDepthImage = LightshipCpuImage.TryGetFromXRCpuImage(_depthCpuImage, out depthCpuImage);
                 if (hasDepthImage &&
-                    _occlusionSubsystem.TryAcquireEnvironmentDepthConfidenceCpuImage(out _depthConfidenceImage))
+                    _occlusionSubsystem.TryAcquireEnvironmentDepthConfidenceCpuImage(out _depthConfidenceCpuImage))
                 {
-                    LightshipCpuImage.TryGetFromXRCpuImage(_depthConfidenceImage, out confidenceCpuImage);
+                    LightshipCpuImage.TryGetFromXRCpuImage(_depthConfidenceCpuImage, out confidenceCpuImage);
                 }
             }
 
             return hasDepthImage;
         }
 
+        private int _noGpsWarningFramerate = 120;
         public override bool TryGetGpsLocation(out GpsLocationCStruct gps)
         {
             if (Input.location.status == LocationServiceStatus.Stopped)
             {
-                RequestLocationPermissions();
+                if (_requestedLocationPermissions && Time.frameCount % _noGpsWarningFramerate == 0)
+                {
+                    MissingLocationPermissionLog();
+                }
+                else
+                {
+                    TryStartLocation();
+                }
             }
-
-            if (_locationServiceNeedsToStart)
-                TryStartLocationService();
 
             if (Input.location.status != LocationServiceStatus.Running)
             {
@@ -302,19 +291,14 @@ namespace Niantic.Lightship.AR.PAM
 
         public override bool TryGetCompass(out CompassDataCStruct compass)
         {
+            StartCompassIfNeeded();
+
             if (Input.location.status == LocationServiceStatus.Stopped)
             {
-                RequestLocationPermissions();
+                TryStartLocation();
             }
 
-            if (Input.compass.enabled == false)
-            {
-                EnableCompass();
-            }
-
-            if (_locationServiceNeedsToStart)
-                TryStartLocationService();
-
+            // Compass values are invalid if the location service is not running
             if (Input.location.status != LocationServiceStatus.Running)
             {
                 compass = default;
@@ -338,104 +322,128 @@ namespace Niantic.Lightship.AR.PAM
             return true;
         }
 
-        public override void OnFormatAdded(DataFormat formatAdded)
+        // Protected because it's invoked from ML2SubsystemsDataAcquirer
+        // This method won't ever fail, per se.
+        // But enabling the compass won't contain true heading data if the location service is not running.
+        protected void StartCompassIfNeeded()
         {
-            switch (formatAdded)
+            if (Input.compass.enabled)
             {
-                case DataFormat.kGpsLocation:
-                    if (Input.location.status == LocationServiceStatus.Stopped)
-                    {
-                        RequestLocationPermissions();
-                    }
-                    break;
-                case DataFormat.kCompass:
-                    if (Input.location.status == LocationServiceStatus.Stopped)
-                    {
-                        // Lazy start of location services with compass.
-                        EnableCompass();
-                        RequestLocationPermissions();
-                    }
-
-                    if (Input.compass.enabled == false)
-                    {
-                        // We shouldn't need to restart the location service, but simply
-                        // enable the compass.
-                        EnableCompass();
-                    }
-                    break;
-            }
-        }
-
-        public override void OnFormatRemoved(DataFormat formatRemoved)
-        {
-            switch (formatRemoved)
-            {
-                case DataFormat.kGpsLocation:
-                    // We don't want to stop the location service in case the developer needs it for other non-lightship functionality
-                    break;
-
-                case DataFormat.kCompass:
-                    // We don't want to stop the location service in case the developer needs it for other non-lightship functionality
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// How permissions are requested differs between iOS and Android
-        /// </summary>
-        private void RequestLocationPermissions()
-        {
-            Log.Info("Location services are required by an enabled ARDK feature, so ARDK will attempt to enable them.");
-            // Android devices require permissions to be granted before starting the Location Service.
-            bool startedWithLocationPermission = Input.location.isEnabledByUser;
-            if (!startedWithLocationPermission && Application.platform == RuntimePlatform.Android)
-            {
-#if !UNITY_EDITOR && UNITY_ANDROID
-                Permission.RequestUserPermission(Permission.FineLocation);
-#endif
-                _locationServiceNeedsToStart = true;
-                // We will try to start Location Service in TryStartLocationService()
                 return;
             }
 
-            // This will trigger Permissions on iOS
-            Input.location.Start(DefaultAccuracyMeters, DefaultDistanceMeters);
-            _autoEnabledLocationServices = true;
-        }
-
-        private void EnableCompass()
-        {
             Log.Info("The device's compass is required by an enabled ARDK feature, so it is being turned on.");
             Input.compass.enabled = true;
             _autoEnabledCompass = true;
         }
 
-        /// <summary>
-        /// For Android devices, the Location Service can only be stared after Permissions are granted
-        /// </summary>
-        protected void TryStartLocationService()
+        // Protected because it's invoked from ML2SubsystemsDataAcquirer
+        protected void TryStartLocation()
         {
-            if (!Input.location.isEnabledByUser)
+            // If the user has previously denied permissions and then enabled them in their device's settings,
+            // the app must be restarted for the permissions to take effect.
+            if (_requestedLocationPermissions)
             {
-                // Cannot Start if Location Permissions have not been granted
                 return;
             }
 
             if (Input.location.status == LocationServiceStatus.Initializing ||
                 Input.location.status == LocationServiceStatus.Running)
             {
-                // Start was already called
-                _locationServiceNeedsToStart = false;
                 return;
             }
 
             // We can only start the Location Service when it is not running
             if (Input.location.status == LocationServiceStatus.Stopped)
             {
-                Input.location.Start(DefaultAccuracyMeters, DefaultDistanceMeters);
-                _locationServiceNeedsToStart = false;
-                return;
+                Log.Info("Location services are required by an enabled ARDK feature, so ARDK will attempt to enable them.");
+                _requestedLocationPermissions = true;
+
+                // Starting in Unity 2021, simply starting the location service will prompt the user for permissions
+                // on Android devices (same as iOS devices). However, this flow also is bugged when multiple permissions
+                // are requested at the same time (see comment below). So we're stuck with this non-elegant solution
+                // where we request Android and iOS permission separately.
+#if !UNITY_EDITOR && UNITY_ANDROID
+                if (!Permission.HasUserAuthorizedPermission(Permission.FineLocation))
+                {
+                    Permission.RequestUserPermission(Permission.FineLocation);
+
+                    // Ideally, we are using the PermissionCallbacks for everything. However...
+                    // We've observed that when multiple permissions are requested at the same time
+                    // (i.e. the location permission request here overlaps with the camera permission
+                    // request from the ARSession), those callbacks are not invoked.
+
+                    // There's no way to determine if the permission request was denied if the callback
+                    // set up above does not return, because the Permission.HasUserAuthorizedPermission
+                    // method returns false for both "denied" and "hasn't responded yet." So we'll
+                    // print the warning periodically (see TryGetGpsLocation).
+                    MonoBehaviourEventDispatcher.Updating.AddListener(AndroidPermissionRequestGrantedCheck);
+                }
+                else
+                {
+                    Log.Info("Location permissions were already granted. Starting location services...");
+                    StartLocation();
+                }
+#else
+                StartLocation();
+
+                // The iOS permission request doesn't block the thread, and the app doesn't lose focus to the
+                // permission request popup right away, so we need to poll for the status of the location service
+                // in a future frame
+                MonoBehaviourEventDispatcher.Updating.AddListener(IOSPermissionRequestCheck);
+#endif
             }
+        }
+
+#if UNITY_ANDROID
+        private void OnAndroidPermissionDenied(string permissionName)
+        {
+            MissingLocationPermissionLog();
+        }
+
+        private void AndroidPermissionRequestGrantedCheck()
+        {
+            if (Input.location.status == LocationServiceStatus.Stopped &&
+                Permission.HasUserAuthorizedPermission(Permission.FineLocation))
+            {
+                Log.Info("Location permissions granted. Starting location services...");
+                StartLocation();
+
+                MonoBehaviourEventDispatcher.Updating.RemoveListener(AndroidPermissionRequestGrantedCheck);
+            }
+        }
+#endif
+        private void IOSPermissionRequestCheck()
+        {
+            switch (Input.location.status)
+            {
+                case LocationServiceStatus.Initializing:
+                    // Continue the checking
+                    return;
+                case LocationServiceStatus.Failed:
+                    MissingLocationPermissionLog();
+                    break;
+                case LocationServiceStatus.Running:
+                    Log.Info("Location permissions found. Location services are now running.");
+                    break;
+            }
+
+            MonoBehaviourEventDispatcher.Updating.RemoveListener(IOSPermissionRequestCheck);
+        }
+
+        private void MissingLocationPermissionLog()
+        {
+            Log.Warning
+            (
+                "Fine location permissions are not currently granted. " +
+                "Some ARDK features are limited without location data."
+            );
+        }
+
+        private void StartLocation()
+        {
+            _autoEnabledLocationServices = true;
+            Input.location.Start(DefaultAccuracyMeters, DefaultDistanceMeters);
         }
     }
 }

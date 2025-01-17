@@ -13,7 +13,9 @@ using Niantic.Lightship.AR;
 using Niantic.Lightship.AR.Core;
 using Niantic.Lightship.AR.Loader;
 using Niantic.Lightship.AR.Utilities;
-using AOT; // MonoPInvokeCallback attribute
+using AOT;
+
+using Niantic.Lightship.SharedAR.Settings; // MonoPInvokeCallback attribute
 
 namespace Niantic.Lightship.SharedAR.Rooms
 {
@@ -49,12 +51,7 @@ namespace Niantic.Lightship.SharedAR.Rooms
         static RoomManagementService()
         {
             _serviceImpl = _HttpRoomManagementServiceImpl._Instance;
-            var appId = Application.identifier;
-
-            var lightshipSettings = LightshipSettingsHelper.ActiveSettings;
-            var apiKey = lightshipSettings.ApiKey;
-            _marshEndPoint = lightshipSettings.EndpointSettings.SharedArEndpoint;
-            _serviceImpl.InitializeService(_marshEndPoint, appId, apiKey);
+            TryReinitializeRoomManagementService();
         }
 
         internal static void _InitializeServiceForIntegrationTesting(string apiKey, string marshEndpoint)
@@ -156,6 +153,44 @@ namespace Niantic.Lightship.SharedAR.Rooms
             }
 
             return RoomManagementServiceStatus.Ok;
+        }
+
+        [PublicAPI]
+        public static void TryReinitializeRoomManagementService()
+        {
+            var appId = Application.identifier;
+            var lightshipSettings = LightshipSettingsHelper.ActiveSettings;
+
+            if (lightshipSettings == null)
+            {
+                Log.Info("LightshipSettings is not initialized");
+                return;
+            }
+
+            var apiKey = lightshipSettings.ApiKey;
+            _marshEndPoint = lightshipSettings.EndpointSettings.SharedArEndpoint;
+
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                Log.Info("API Key is not set. Please set API Key in Lightship Settings.");
+                return;
+            }
+            if (string.IsNullOrEmpty(_marshEndPoint))
+            {
+                Log.Info("SharedArEndpoint is not set. Please set SharedArEndpoint in Lightship Settings.");
+                return;
+            }
+
+            if (_serviceImpl == null)
+            {
+                _serviceImpl = _HttpRoomManagementServiceImpl._Instance;
+            }
+            else
+            {
+                _serviceImpl.ReleaseService();
+            }
+
+            _serviceImpl.InitializeService(_marshEndPoint, appId, apiKey);
         }
 
         /// <summary>
@@ -305,7 +340,10 @@ namespace Niantic.Lightship.SharedAR.Rooms
         [Obsolete]
         public delegate void GetOrCreateRoomCallback(RoomManagementServiceStatus status, string room_id);
 
+#pragma warning disable CS0414 // Type or member is not used
         private static uint _cbCounter = 0;
+#pragma warning restore CS0414 // Type or member is not used
+
         [Obsolete]
         private static Dictionary<uint, GetOrCreateRoomCallback> _getOrCreateRoomCbs = new();
 
@@ -405,7 +443,9 @@ namespace Niantic.Lightship.SharedAR.Rooms
         /// <param name="roomCapacity">Room capacity to use if a room needs to be made</param>
         /// <returns>Task with the request status and the roomId on successful requests</returns>
         [PublicAPI]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static async Task<GetOrCreateRoomAsyncTaskResult> GetOrCreateRoomAsync(
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
             string roomName, string roomDescription, uint roomCapacity)
         {
 #if NIANTIC_LIGHTSHIP_AR_LOADER_ENABLED
