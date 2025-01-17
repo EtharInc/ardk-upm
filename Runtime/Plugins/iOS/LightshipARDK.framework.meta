@@ -1,85 +1,52 @@
 fileFormatVersion: 2
 guid: 286e21d419da5f585a92b5de969537d3
-fileFormatVersion: 2
 PluginImporter:
   externalObjects: {}
-  serializedVersion: 2
+  serializedVersion: 3
   iconMap: {}
   executionOrder: {}
+  defineConstraints: []
   isPreloaded: 0
   isOverridable: 0
+  isExplicitlyReferenced: 0
+  validateReferences: 1
   platformData:
-  - first:
-      : Any
-    second:
-      enabled: 0
-      settings: {}
-  - first:
-      Android: Android
-    second:
+    Android:
       enabled: 0
       settings:
         CPU: AnyCPU
-  - first:
-      Editor: Editor
-    second:
+    Any:
+      enabled: 0
+      settings: {}
+    Editor:
       enabled: 0
       settings:
         CPU: AnyCPU
         DefaultValueInitialized: true
         OS: AnyOS
-  - first:
-      Standalone: Linux
-    second:
+    Linux64:
       enabled: 0
       settings:
         CPU: AnyCPU
-  - first:
-      Standalone: Linux64
-    second:
+    OSXUniversal:
       enabled: 0
       settings:
         CPU: AnyCPU
-  - first:
-      Standalone: LinuxUniversal
-    second:
+    Win:
       enabled: 0
       settings:
         CPU: AnyCPU
-  - first:
-      Standalone: OSXUniversal
-    second:
+    Win64:
       enabled: 0
       settings:
         CPU: AnyCPU
-  - first:
-      '': OSXIntel
-    second:
-      enabled: 0
-      settings: {}
-  - first:
-      '': OSXIntel64
-    second:
-      enabled: 0
-      settings: {}
-  - first:
-      Standalone: Win
-    second:
-      enabled: 0
-      settings:
-        CPU: AnyCPU
-  - first:
-      Standalone: Win64
-    second:
-      enabled: 0
-      settings:
-        CPU: AnyCPU
-  - first:
-      iPhone: iOS
-    second:
+    iOS:
       enabled: 1
       settings:
-        CPU: AnyCPU
         AddToEmbeddedBinaries: true
+        CPU: AnyCPU
         CompileFlags: null
         FrameworkDependencies: Foundation;UIKit;Security;Metal
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

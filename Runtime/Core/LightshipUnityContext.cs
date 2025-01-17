@@ -35,9 +35,9 @@ namespace Niantic.Lightship.AR.Core
         // Event triggered right before the context is destroyed. Used by internal code its lifecycle is not managed
         // by native UnityContext
         internal static event Action OnDeinitialized;
-#pragma warning disable CS0414 // Type or member is not used
+#pragma warning disable CS0067 // Type or member is not used
         internal static event Action OnUnityContextHandleInitialized;
-#pragma warning restore CS0414 // Type or member is not used
+#pragma warning restore CS0067 // Type or member is not used
 
         // Function that an external plugin can use to register its own PlatformDataAcquirer with PAM
         internal static Func<IntPtr, bool, bool, PlatformAdapterManager> CreatePamWithPlugin;
